@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Client {
 	private static Socket socket = null;
@@ -18,6 +19,10 @@ public class Client {
 //	private String serverData = "";
 	private String jobID = "";
 	private String incomingMessage = inMessage();
+	private String serverType = "";
+	private String serverID = "";
+//	private int lines = 0;
+
 
 // GETS : serverType  serverID  state  curStartTime  core  mem  disk  #wJobs  #rJobs
 //		  [0]		  [1]		[2]	   [3]		     [4]   [5]  [6]   [7]     [8]
@@ -25,11 +30,28 @@ public class Client {
 // DATA : DATA  nRecs  recLen
 // 		  [0]	[1]	   [2]
 //
+//	private String[] handleGetsCapable() throws IOException {
+//		int coreCount;
+//		int memory;
+//		int disk;
+//		int lines;
+//
+//		String[] splitData = incomingMessage.split("\\s+");
+//
+//		List<Server> temporaryServers;
+//		for(int i = 0; i < lines; i++) {
+//			String message = inStream.readLine();
+//			String[] splitServers = incomingMessage.split("\\s+");
+//			serverType = splitServers[0];
+//			serverID = splitServers[1];
+//		}
 //				String[] splitStr = incomingMessage.split("\\s+");
-//				private static List<String> serverInfo = new ArrayList<>();
+//				List<Server> myCapableServer = new ArrayList<>();
 //				String[] splitStr =  serverData.split;
 //
 //				serverInfo.add()
+
+//	}
 
 	public static void main(String[] args) throws IOException {
 		Client client = new Client("127.0.0.1", 50000);
@@ -61,14 +83,14 @@ public class Client {
 		outMessage(AUTH);
 		inMessage();
 
-//		// Read ds-system information for serverList
-		ArrayList<Server> serverList;
-		serverList = XML.parse("ds-system.xml");
+		// Read ds-system information for serverList
+//		ArrayList<Server> serverList;
+//		serverList = XML.parse("ds-system.xml");
 
 		// Confirm to Server that Client is ready
 		outMessage(REDY);
 
-		int largestServer = mostCores(serverList);
+//		int largestServer = mostCores(serverList);
 
 		// If there are no jobs, then quit
 		if (incomingMessage.contains(NONE)) {
@@ -83,6 +105,13 @@ public class Client {
 				outMessage(getsCapable(incomingMessage));
 			}
 			if (incomingMessage.contains(DATA)) {
+//				String[] splitData = incomingMessage.split("\\s+");
+//				lines = Integer.parseInt(splitData[1]);
+				outMessage(OK);
+				incomingMessage = inMessage();
+				String[] splitServers = incomingMessage.split("\\s+");
+				serverType = splitServers[0];
+				serverID = splitServers[1];
 				outMessage(OK);
 			}
 			if (incomingMessage.contains(OK)) {
@@ -92,10 +121,7 @@ public class Client {
 				outMessage(REDY);
 			}
 			if (incomingMessage.contains(".")) {
-				outMessage(availableServer(serverList.get(largestServer)));
-			}
-			if(incomingMessage.contains("joon")) {
-				outMessage(OK);
+				outMessage(availableServer(serverType, serverID));
 			}
 			incomingMessage = inMessage();
 		}
@@ -128,16 +154,14 @@ public class Client {
 
 	private String inMessage() {
 		// Server to Client messages
-		String str;
-		char[] charbuf = new char[65535];
+		String str = "";
 		try {
 			if (inStream != null) {
-				inStream.read(charbuf);
+				str = inStream.readLine() + "\n";
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		str = new String(charbuf, 0, charbuf.length);
 
 		// Print Server input to screen
 		System.out.print("Server: " + str);
@@ -145,8 +169,8 @@ public class Client {
 		return str;
 	}
 
-	private String availableServer(Server s) {
-		return "SCHD " + jobID + " " + s.getType() + " " + "0" + "\n";
+	private String availableServer(String serverType, String serverID) {
+		return "SCHD " + jobID + " " + serverType + " " + serverID + "\n";
 	}
 
 	private String getsCapable(String job) {
@@ -155,15 +179,15 @@ public class Client {
 	}
 
 	// Gets first server with the highest number of cores
-	private int mostCores(ArrayList<Server> s) {
-		int highestID = 0;
-		if (s.size() > 0) {
-			for (int i = 0; i < s.size(); i++) {
-				if (s.get(i).getCores() > s.get(highestID).getCores())
-					highestID = i;
-			}
-				return highestID;
-			}
-		return 0;
-	}
+//	private int mostCores(ArrayList<Server> s) {
+//		int highestID = 0;
+//		if (s.size() > 0) {
+//			for (int i = 0; i < s.size(); i++) {
+//				if (s.get(i).getCores() > s.get(highestID).getCores())
+//					highestID = i;
+//			}
+//				return highestID;
+//			}
+//		return 0;
+//	}
 }
