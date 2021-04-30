@@ -1,60 +1,32 @@
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Client {
 	private static Socket socket = null;
 	private final DataOutputStream outStream;
 	private final BufferedReader inStream;
-	private static final String HELO = "HELO\n";
-	private static final String AUTH = "AUTH " + System.getProperty("user.name") + "\n";
-	private static final String REDY = "REDY\n";
-	private static final String NONE = "NONE\n";
-	private static final String QUIT = "QUIT\n";
-	private static final String OK = "OK\n";
+	private static final String ADDRESS = "127.0.0.1";
+	private static final int PORT = 50000;
+	private static final String PARSEWHITESPACE = "\\s+";
+	private static final String NEWLINE = "\n";
+	private static final String WHITESPACE = " ";
+	private static final String EMPTYSTRING = "";
+	private static final String HELO = "HELO"+NEWLINE;
+	private static final String AUTH = "AUTH " + System.getProperty("user.name") + NEWLINE;
+	private static final String REDY = "REDY" + NEWLINE;
+	private static final String NONE = "NONE" + NEWLINE;
+	private static final String QUIT = "QUIT" + NEWLINE;
+	private static final String OK = "OK" + NEWLINE;
 	private static final String JOBN = "JOBN";
 	private static final String JCPL = "JCPL";
 	private static final String DATA = "DATA";
-//	private String serverData = "";
-	private String jobID = "";
-	private String incomingMessage = inMessage();
-	private String serverType = "";
-	private String serverID = "";
-//	private int lines = 0;
-
-
-// GETS : serverType  serverID  state  curStartTime  core  mem  disk  #wJobs  #rJobs
-//		  [0]		  [1]		[2]	   [3]		     [4]   [5]  [6]   [7]     [8]
-
-// DATA : DATA  nRecs  recLen
-// 		  [0]	[1]	   [2]
-//
-//	private String[] handleGetsCapable() throws IOException {
-//		int coreCount;
-//		int memory;
-//		int disk;
-//		int lines;
-//
-//		String[] splitData = incomingMessage.split("\\s+");
-//
-//		List<Server> temporaryServers;
-//		for(int i = 0; i < lines; i++) {
-//			String message = inStream.readLine();
-//			String[] splitServers = incomingMessage.split("\\s+");
-//			serverType = splitServers[0];
-//			serverID = splitServers[1];
-//		}
-//				String[] splitStr = incomingMessage.split("\\s+");
-//				List<Server> myCapableServer = new ArrayList<>();
-//				String[] splitStr =  serverData.split;
-//
-//				serverInfo.add()
-
-//	}
+	String incomingMessage = inMessage();
 
 	public static void main(String[] args) throws IOException {
-		Client client = new Client("127.0.0.1", 50000);
+		Client client = new Client(ADDRESS, PORT);
 		client.eventLoop();
 	}
 
@@ -74,7 +46,11 @@ public class Client {
 		inStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 
-	private void eventLoop() throws FileNotFoundException {
+	private void eventLoop() throws IOException {
+		String jobID = EMPTYSTRING;
+		String serverType = EMPTYSTRING;
+		String serverID = EMPTYSTRING;
+
 		// "HELO" to initiate connection
 		outMessage(HELO);
 		inMessage();
@@ -83,14 +59,8 @@ public class Client {
 		outMessage(AUTH);
 		inMessage();
 
-		// Read ds-system information for serverList
-//		ArrayList<Server> serverList;
-//		serverList = XML.parse("ds-system.xml");
-
 		// Confirm to Server that Client is ready
 		outMessage(REDY);
-
-//		int largestServer = mostCores(serverList);
 
 		// If there are no jobs, then quit
 		if (incomingMessage.contains(NONE)) {
@@ -100,7 +70,7 @@ public class Client {
 		// Event loop to handle incoming jobs
 		while (!incomingMessage.contains(NONE)) {
 			if (incomingMessage.contains(JOBN)) {
-				String[] splitStr = incomingMessage.split("\\s+");
+				String[] splitStr = incomingMessage.split(PARSEWHITESPACE);
 				jobID = splitStr[2];
 				outMessage(getsCapable(incomingMessage));
 			}
@@ -109,7 +79,7 @@ public class Client {
 //				lines = Integer.parseInt(splitData[1]);
 				outMessage(OK);
 				incomingMessage = inMessage();
-				String[] splitServers = incomingMessage.split("\\s+");
+				String[] splitServers = incomingMessage.split(PARSEWHITESPACE);
 				serverType = splitServers[0];
 				serverID = splitServers[1];
 				outMessage(OK);
@@ -121,7 +91,7 @@ public class Client {
 				outMessage(REDY);
 			}
 			if (incomingMessage.contains(".")) {
-				outMessage(availableServer(serverType, serverID));
+				outMessage(availableServer(jobID, serverType, serverID));
 			}
 			incomingMessage = inMessage();
 		}
@@ -129,39 +99,28 @@ public class Client {
 		// If all jobs are completed sent quit to Server
 		outMessage(QUIT);
 
-		try {
 			if (inMessage().contains(QUIT)) {
 				outStream.close();
 				socket.close();
 			}
-		} catch (IOException ignored) {
-		}
 		System.exit(1);
 	}
 
-	private void outMessage(String str) {
+	private void outMessage(String str) throws IOException {
 		// Client to Server messages
-		byte[] byteMsg = str.getBytes();
-		try {
-			outStream.write(byteMsg);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		byte[] byteMessage = str.getBytes();
+			outStream.write(byteMessage);
 
 		// Print Client output to screen
 		System.out.print("Client: " + str);
 	}
 
-	private String inMessage() {
+	private String inMessage() throws IOException {
 		// Server to Client messages
-		String str = "";
-		try {
+		String str = EMPTYSTRING;
 			if (inStream != null) {
-				str = inStream.readLine() + "\n";
+				str = inStream.readLine() + NEWLINE;
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 
 		// Print Server input to screen
 		System.out.print("Server: " + str);
@@ -169,25 +128,12 @@ public class Client {
 		return str;
 	}
 
-	private String availableServer(String serverType, String serverID) {
-		return "SCHD " + jobID + " " + serverType + " " + serverID + "\n";
+	private String availableServer(String jobID, String serverType, String serverID) {
+		return "SCHD " + jobID + WHITESPACE + serverType + WHITESPACE + serverID + NEWLINE;
 	}
 
 	private String getsCapable(String job) {
-		String[] splitStr = job.split("\\s+");
-		return "GETS Capable " + splitStr[4] + " " + splitStr[5] + " " + splitStr[6] + "\n";
+		String[] splitStr = job.split(PARSEWHITESPACE);
+		return "GETS Capable " + splitStr[4] + WHITESPACE + splitStr[5] + WHITESPACE + splitStr[6] + NEWLINE;
 	}
-
-	// Gets first server with the highest number of cores
-//	private int mostCores(ArrayList<Server> s) {
-//		int highestID = 0;
-//		if (s.size() > 0) {
-//			for (int i = 0; i < s.size(); i++) {
-//				if (s.get(i).getCores() > s.get(highestID).getCores())
-//					highestID = i;
-//			}
-//				return highestID;
-//			}
-//		return 0;
-//	}
 }
