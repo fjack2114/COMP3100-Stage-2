@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class Client {
 	private static Socket socket = null;
@@ -23,7 +24,10 @@ public class Client {
 	private static final String JOBN = "JOBN";
 	private static final String JCPL = "JCPL";
 	private static final String DATA = "DATA";
-	String incomingMessage = inMessage();
+	private static ArrayList<Server> serverInformation = new ArrayList<>();
+	private String incomingMessage = inMessage();
+	private int jobCores = 0;
+	private String jobID = EMPTYSTRING;
 
 	public static void main(String[] args) throws IOException {
 		Client client = new Client(ADDRESS, PORT);
@@ -47,9 +51,6 @@ public class Client {
 	}
 
 	private void eventLoop() throws IOException {
-		String jobID = EMPTYSTRING;
-		String serverType = EMPTYSTRING;
-		String serverID = EMPTYSTRING;
 
 		// "HELO" to initiate connection
 		outMessage(HELO);
@@ -75,13 +76,25 @@ public class Client {
 				outMessage(getsCapable(incomingMessage));
 			}
 			if (incomingMessage.contains(DATA)) {
-//				String[] splitData = incomingMessage.split("\\s+");
-//				lines = Integer.parseInt(splitData[1]);
+				String[] splitData = incomingMessage.split("\\s+");
+				int numServers = Integer.parseInt(splitData[1]);
 				outMessage(OK);
 				incomingMessage = inMessage();
 				String[] splitServers = incomingMessage.split(PARSEWHITESPACE);
-				serverType = splitServers[0];
-				serverID = splitServers[1];
+				for(int i = 0; i < numServers; i++) {
+					String serverType = splitServers[0];
+					String serverID = splitServers[1];
+					String status = splitServers[2];
+					int startTime = Integer.parseInt(splitServers[3]);
+					int cores = Integer.parseInt(splitServers[4]);
+					int memory = Integer.parseInt(splitServers[5]);
+					int disk = Integer.parseInt(splitServers[6]);
+					int jobsWaiting = Integer.parseInt(splitServers[7]);
+					int jobsRunning = Integer.parseInt(splitServers[8]);
+
+					Server serverData = new Server(serverType, serverID, status, startTime, cores, memory, disk, jobsWaiting, jobsRunning);
+					serverInformation.add(serverData);
+				}
 				outMessage(OK);
 			}
 			if (incomingMessage.contains(OK)) {
@@ -91,7 +104,7 @@ public class Client {
 				outMessage(REDY);
 			}
 			if (incomingMessage.contains(".")) {
-				outMessage(availableServer(jobID, serverType, serverID));
+				outMessage(algorithm(jobID, serverInformation));
 			}
 			incomingMessage = inMessage();
 		}
@@ -128,12 +141,17 @@ public class Client {
 		return str;
 	}
 
-	private String availableServer(String jobID, String serverType, String serverID) {
-		return "SCHD " + jobID + WHITESPACE + serverType + WHITESPACE + serverID + NEWLINE;
+	private String algorithm(String jobID, ArrayList<Server> serverInformation) {
+		return "SCHD " + jobID + WHITESPACE + serverInformation.get(0).serverType + WHITESPACE + serverInformation.get(0).serverID + NEWLINE;
 	}
 
 	private String getsCapable(String job) {
 		String[] splitStr = job.split(PARSEWHITESPACE);
-		return "GETS Capable " + splitStr[4] + WHITESPACE + splitStr[5] + WHITESPACE + splitStr[6] + NEWLINE;
+		jobCores = Integer.parseInt(splitStr[4]);
+		int jobMemory = Integer.parseInt(splitStr[5]);
+		int jobDisk = Integer.parseInt(splitStr[6]);
+		return "GETS Capable " + jobCores + WHITESPACE + jobMemory + WHITESPACE + jobDisk + NEWLINE;
 	}
+
+	
 }
