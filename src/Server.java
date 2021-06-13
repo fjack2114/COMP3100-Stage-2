@@ -10,19 +10,19 @@ public class Server {
 	int jobsWaiting;
 	int jobsRunning;
 
-		public Server(String serverType, String serverID, String status, int startTime, int cores, int memory, int disk, int jobsWaiting, int jobsRunning) {
-			this.serverType = serverType;
-			this.serverID = serverID;
-			this.status = status;
-			this.startTime = startTime;
-			this.cores = cores;
-			this.memory = memory;
-			this.disk = disk;
-			this.jobsWaiting = jobsWaiting;
-			this.jobsRunning = jobsRunning;
-		}
+	public Server(String serverType, String serverID, String status, int startTime, int cores, int memory, int disk, int jobsWaiting, int jobsRunning) {
+		this.serverType = serverType;
+		this.serverID = serverID;
+		this.status = status;
+		this.startTime = startTime;
+		this.cores = cores;
+		this.memory = memory;
+		this.disk = disk;
+		this.jobsWaiting = jobsWaiting;
+		this.jobsRunning = jobsRunning;
+	}
 
-	public String getServerType() {
+    public String getServerType() {
 		return serverType;
 	}
 

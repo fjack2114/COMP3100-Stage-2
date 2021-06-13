@@ -25,8 +25,11 @@ public class Client {
 	private static final String JCPL = "JCPL";
 	private static final String DATA = "DATA";
 	private static ArrayList<Server> serverInformation = new ArrayList<>();
+	private static ArrayList<StaticServerList> setServerInformation = new ArrayList<>();
 	private String incomingMessage = inMessage();
 	private int jobCores = 0;
+	private int jobMemory = 0;
+	private int jobDisk = 0;
 	private String jobID = EMPTYSTRING;
 
 	public static void main(String[] args) throws IOException {
@@ -76,25 +79,12 @@ public class Client {
 				outMessage(getsCapable(incomingMessage));
 			}
 			if (incomingMessage.contains(DATA)) {
-				String[] splitData = incomingMessage.split("\\s+");
+				String[] splitData = incomingMessage.split(PARSEWHITESPACE);
 				int numServers = Integer.parseInt(splitData[1]);
 				outMessage(OK);
 				incomingMessage = inMessage();
 				String[] splitServers = incomingMessage.split(PARSEWHITESPACE);
-				for(int i = 0; i < numServers; i++) {
-					String serverType = splitServers[0];
-					String serverID = splitServers[1];
-					String status = splitServers[2];
-					int startTime = Integer.parseInt(splitServers[3]);
-					int cores = Integer.parseInt(splitServers[4]);
-					int memory = Integer.parseInt(splitServers[5]);
-					int disk = Integer.parseInt(splitServers[6]);
-					int jobsWaiting = Integer.parseInt(splitServers[7]);
-					int jobsRunning = Integer.parseInt(splitServers[8]);
-
-					Server serverData = new Server(serverType, serverID, status, startTime, cores, memory, disk, jobsWaiting, jobsRunning);
-					serverInformation.add(serverData);
-				}
+				parseServerInfo(numServers, splitServers);
 				outMessage(OK);
 			}
 			if (incomingMessage.contains(OK)) {
@@ -104,7 +94,8 @@ public class Client {
 				outMessage(REDY);
 			}
 			if (incomingMessage.contains(".")) {
-				outMessage(algorithm(jobID, serverInformation));
+				outMessage(onlyFit(jobID, setServerInformation));
+				serverInformation.clear();
 			}
 			incomingMessage = inMessage();
 		}
@@ -125,7 +116,7 @@ public class Client {
 			outStream.write(byteMessage);
 
 		// Print Client output to screen
-		System.out.print("Client: " + str);
+//		System.out.print("Client: " + str);
 	}
 
 	private String inMessage() throws IOException {
@@ -136,22 +127,46 @@ public class Client {
 			}
 
 		// Print Server input to screen
-		System.out.print("Server: " + str);
+//		System.out.print("Server: " + str);
 
 		return str;
 	}
 
-	private String algorithm(String jobID, ArrayList<Server> serverInformation) {
-		return "SCHD " + jobID + WHITESPACE + serverInformation.get(0).serverType + WHITESPACE + serverInformation.get(0).serverID + NEWLINE;
+	private String onlyFit(String jobID, ArrayList<StaticServerList> staticServerInformation) {
+		StaticServerList server;
+		Server available = serverInformation.get(0);
+		for(int i = 0; i < staticServerInformation.size(); i++) {
+			if(jobCores == staticServerInformation.get(i).cores && staticServerInformation.get(i).memory > jobMemory) {
+				server = staticServerInformation.get(i);
+				return "SCHD " + jobID + WHITESPACE + server.serverType + WHITESPACE + 0 + NEWLINE;
+			}
+		}
+		return "SCHD " + jobID + WHITESPACE + available.serverType + WHITESPACE + available.serverID + NEWLINE;
 	}
 
 	private String getsCapable(String job) {
 		String[] splitStr = job.split(PARSEWHITESPACE);
 		jobCores = Integer.parseInt(splitStr[4]);
-		int jobMemory = Integer.parseInt(splitStr[5]);
-		int jobDisk = Integer.parseInt(splitStr[6]);
+		jobMemory = Integer.parseInt(splitStr[5]);
+		jobDisk = Integer.parseInt(splitStr[6]);
 		return "GETS Capable " + jobCores + WHITESPACE + jobMemory + WHITESPACE + jobDisk + NEWLINE;
 	}
 
+	private void parseServerInfo(int numServers, String[] splitServers) {
+		for(int i = 0; i < numServers; i++) {
+			String serverType = splitServers[0];
+			String serverID = splitServers[1];
+			String status = splitServers[2];
+			int startTime = Integer.parseInt(splitServers[3]);
+			int cores = Integer.parseInt(splitServers[4]);
+			int memory = Integer.parseInt(splitServers[5]);
+			int disk = Integer.parseInt(splitServers[6]);
+			int jobsWaiting = Integer.parseInt(splitServers[7]);
+			int jobsRunning = Integer.parseInt(splitServers[8]);
+
+			Server serverData = new Server(serverType, serverID, status, startTime, cores, memory, disk, jobsWaiting, jobsRunning);
+			serverInformation.add(serverData);
+		}
+	}
 	
 }
