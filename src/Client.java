@@ -25,6 +25,7 @@ public class Client {
 	private static final String JOBN = "JOBN";
 	private static final String JCPL = "JCPL";
 	private static final String DATA = "DATA";
+	private static final String SCHD = "SCHD ";
 	private static ArrayList<Server> serverInformation = new ArrayList<>();
 	private static ArrayList<StaticServerList> setServerInformation = new ArrayList<>();
 	private String incomingMessage = inMessage();
@@ -91,7 +92,7 @@ public class Client {
 					for(int i = 0; i < numServers; i++) {
 						incomingMessage = inMessage();
 						String[] splitServers = incomingMessage.split(PARSEWHITESPACE);
-						parseServerInfo(numServers, splitServers);
+						parseServerInfo(splitServers);
 
 					}
 				outMessage(OK);
@@ -105,10 +106,10 @@ public class Client {
 			if (incomingMessage.contains(".")) {
 				if(numServers > 0) {
 					outMessage(terminateServers());
-					outMessage(onlyFit(jobID, setServerInformation));
+					outMessage(onlyFit(jobID));
 				}
 				else if (numServers == 0){
-					outMessage(Objects.requireNonNull(processJob(jobID, setServerInformation)));
+					outMessage(Objects.requireNonNull(processJob(jobID)));
 				}
 				serverInformation.clear();
 			}
@@ -147,30 +148,23 @@ public class Client {
 		return str;
 	}
 
-	private String onlyFit(String jobID, ArrayList<StaticServerList> staticServerInformation) {
-		Server available = serverInformation.get(0);
+	private String onlyFit(String jobID) {
 
 		for(int h = 0; h < serverInformation.size(); h++) {
 			if (serverInformation.get(h).cores >= jobCores  && serverInformation.get(h).cores - jobCores <= 7 && serverInformation.get(h).memory >= jobMemory && serverInformation.get(h).disk >= jobDisk) {
-				return "SCHD " + jobID + WHITESPACE + serverInformation.get(h).serverType + WHITESPACE + serverInformation.get(h).serverID + NEWLINE;
+				return SCHD + jobID + WHITESPACE + serverInformation.get(h).serverType + WHITESPACE + serverInformation.get(h).serverID + NEWLINE;
 			}
 		}
-		for (int i = 0; i < staticServerInformation.size(); i++) {
-			if (staticServerInformation.get(i).cores >= jobCores&& staticServerInformation.get(i).memory > jobMemory && staticServerInformation.get(i).disk > jobDisk) {
-				return "SCHD " + jobID + WHITESPACE + staticServerInformation.get(i).serverType + WHITESPACE + ((int) (Math.random() * (1 + 1)))+ NEWLINE;
-			}
-		}
-
-		return "SCHD " + jobID + WHITESPACE + available.serverType + WHITESPACE + available.serverID + NEWLINE;
+		return processJob(jobID);
 	}
 
-	private String processJob(String jobID, ArrayList<StaticServerList> staticServerInformation) {
-		for (int i = 0; i < staticServerInformation.size(); i++) {
-			if (staticServerInformation.get(i).cores >= jobCores&& staticServerInformation.get(i).memory > jobMemory && staticServerInformation.get(i).disk > jobDisk) {
-				return "SCHD " + jobID + WHITESPACE + staticServerInformation.get(i).serverType + WHITESPACE + ((int) (Math.random() * (1 + 1))) + NEWLINE;
+	private String processJob(String jobID) {
+		for (int i = 0; i < setServerInformation.size(); i++) {
+			if (setServerInformation.get(i).cores >= jobCores&& setServerInformation.get(i).memory > jobMemory && setServerInformation.get(i).disk > jobDisk) {
+				return SCHD + jobID + WHITESPACE + setServerInformation.get(i).serverType + WHITESPACE + ((int) (Math.random() * (1 + 1))) + NEWLINE;
 			}
 		}
-		return null;
+		return EMPTYSTRING;
 	}
 
 	private String terminateServers() {
@@ -179,7 +173,7 @@ public class Client {
 				return "TERM " + serverInformation.get(i).serverType + WHITESPACE + serverInformation.get(i).serverID + NEWLINE;
 			}
 		}
-		return "";
+		return EMPTYSTRING;
 	}
 
 	private String getsAvailable(String job) {
@@ -190,7 +184,7 @@ public class Client {
 		return "GETS Avail " + jobCores + WHITESPACE + jobMemory + WHITESPACE + jobDisk + NEWLINE;
 	}
 
-	private void parseServerInfo(int numServers, String[] splitServers) {
+	private void parseServerInfo(String[] splitServers) {
 			String serverType = splitServers[0];
 			String serverID = splitServers[1];
 			String status = splitServers[2];
