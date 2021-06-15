@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Objects;
+
 
 public class Client {
 	private static Socket socket = null;
@@ -29,31 +29,15 @@ public class Client {
 	private static ArrayList<Server> serverInformation = new ArrayList<>();
 	private static ArrayList<StaticServerList> setServerInformation = new ArrayList<>();
 	private String incomingMessage = inMessage();
+	private int numServers = 0;
 	private int jobCores = 0;
 	private int jobMemory = 0;
 	private int jobDisk = 0;
-	private int numServers = 0;
 	private String jobID = EMPTYSTRING;
 
 	public static void main(String[] args) throws IOException {
 		Client client = new Client(ADDRESS, PORT);
 		client.eventLoop();
-	}
-
-	private static void connect(String address, int port) {
-		try {
-			System.out.println("Connecting to server...");
-			socket = new Socket(address, port);
-			System.out.println("Connection Established");
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public Client(String address, int port) throws IOException {
-		connect(address, port);
-		outStream = new DataOutputStream(socket.getOutputStream());
-		inStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 
 	private void eventLoop() throws IOException {
@@ -74,6 +58,8 @@ public class Client {
 			outMessage(QUIT);
 		}
 
+		// XML cases parses the static server information provided by the ds-system.xml file that is created
+		// when a configuration file is run
 		setServerInformation = XML.parse("ds-system.xml");
 
 		// Event loop to handle incoming jobs
@@ -106,10 +92,10 @@ public class Client {
 			if (incomingMessage.contains(".")) {
 				if(numServers > 0) {
 					outMessage(terminateServers());
-					outMessage(onlyFit(jobID));
+					outMessage(closeFit(jobID));
 				}
 				else if (numServers == 0){
-					outMessage(Objects.requireNonNull(processJob(jobID)));
+					outMessage(processJob(jobID));
 				}
 				serverInformation.clear();
 			}
@@ -126,15 +112,25 @@ public class Client {
 		System.exit(1);
 	}
 
-	private void outMessage(String str) throws IOException {
-		// Client to Server messages
-		byte[] byteMessage = str.getBytes();
-			outStream.write(byteMessage);
-
-		// Print Client output to screen
-//		System.out.print("Client: " + str);
+	// Method establishes a connection between the Client and Server
+	private static void connect(String address, int port) {
+		try {
+			System.out.println("Connecting to server...");
+			socket = new Socket(address, port);
+			System.out.println("Connection Established");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
+	// Method that assigned the input and output for the socket
+	public Client(String address, int port) throws IOException {
+		connect(address, port);
+		outStream = new DataOutputStream(socket.getOutputStream());
+		inStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+	}
+
+	// Handles the messages coming from the Server to the Client
 	private String inMessage() throws IOException {
 		// Server to Client messages
 		String str = EMPTYSTRING;
@@ -148,8 +144,20 @@ public class Client {
 		return str;
 	}
 
-	private String onlyFit(String jobID) {
+	// Method for sending messages from the Client to the Server
+	private void outMessage(String str) throws IOException {
+		// Client to Server messages
+		byte[] byteMessage = str.getBytes();
+		outStream.write(byteMessage);
 
+		// Print Client output to screen
+//		System.out.print("Client: " + str);
+	}
+
+	// Algorithm used for scheduling jobs, can be modified to lower turnaround time if the comparison between
+	// serverInformation.get(h).cores - jobCores <= "number" if number increases
+	// algorithm can also be modified to lower cost if number decreases
+	private String closeFit(String jobID) {
 		for(int h = 0; h < serverInformation.size(); h++) {
 			if (serverInformation.get(h).cores >= jobCores  && serverInformation.get(h).cores - jobCores <= 7 && serverInformation.get(h).memory >= jobMemory && serverInformation.get(h).disk >= jobDisk) {
 				return SCHD + jobID + WHITESPACE + serverInformation.get(h).serverType + WHITESPACE + serverInformation.get(h).serverID + NEWLINE;
@@ -158,15 +166,19 @@ public class Client {
 		return processJob(jobID);
 	}
 
+	// This method is used when there are no "available" servers to process the current job, the method iterates
+	// through and selects a server large enough to handle the current job and the serverID is a randomized number
+	// to balance the load on servers
 	private String processJob(String jobID) {
 		for (int i = 0; i < setServerInformation.size(); i++) {
-			if (setServerInformation.get(i).cores >= jobCores&& setServerInformation.get(i).memory > jobMemory && setServerInformation.get(i).disk > jobDisk) {
-				return SCHD + jobID + WHITESPACE + setServerInformation.get(i).serverType + WHITESPACE + ((int) (Math.random() * (1 + 1))) + NEWLINE;
+			if (setServerInformation.get(i).cores >= jobCores && setServerInformation.get(i).memory > jobMemory && setServerInformation.get(i).disk > jobDisk) {
+				return SCHD + jobID + WHITESPACE + setServerInformation.get(i).serverType + WHITESPACE + ((int) (Math.random() * (setServerInformation.get(i).limit))) + NEWLINE;
 			}
 		}
 		return EMPTYSTRING;
 	}
 
+	// Iterates through the current GETS Avail servers and sends a TERM command for any servers that are idle
 	private String terminateServers() {
 		for(int i = 1; i < numServers; i++) {
 			if (serverInformation.get(i).status.equals("idle")) {
@@ -176,6 +188,7 @@ public class Client {
 		return EMPTYSTRING;
 	}
 
+	// Sends command to retrieve servers that are available to schedule the current job to
 	private String getsAvailable(String job) {
 		String[] splitStr = job.split(PARSEWHITESPACE);
 		jobCores = Integer.parseInt(splitStr[4]);
@@ -184,6 +197,7 @@ public class Client {
 		return "GETS Avail " + jobCores + WHITESPACE + jobMemory + WHITESPACE + jobDisk + NEWLINE;
 	}
 
+	// Parses the data about the current GETS Avail servers into an arraylist to be used by the algorithm
 	private void parseServerInfo(String[] splitServers) {
 			String serverType = splitServers[0];
 			String serverID = splitServers[1];
