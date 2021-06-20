@@ -12,6 +12,7 @@ public class Client {
     private final BufferedReader inStream;
     private static final String ADDRESS = "127.0.0.1";
     private static final int PORT = 50000;
+    private static final String FILEPATH = "ds-system.xml";
     private static final String PARSEWHITESPACE = "\\s+";
     private static final String NEWLINE = "\n";
     private static final String WHITESPACE = " ";
@@ -29,6 +30,7 @@ public class Client {
     private static ArrayList<Server> serverInformation = new ArrayList<>();
     private static ArrayList<StaticServerList> setServerInformation = new ArrayList<>();
     private String incomingMessage = inMessage();
+    private final int algorithmModifier = 7;
     private int numServers = 0;
     private int jobCores = 0;
     private int jobMemory = 0;
@@ -60,7 +62,7 @@ public class Client {
 
         // XML cases parses the static server information provided by the ds-system.xml file that is created
         // when a configuration file is run
-        setServerInformation = XML.parse("ds-system.xml");
+        setServerInformation = XML.parse(FILEPATH);
 
         // Event loop to handle incoming jobs
         while (!incomingMessage.contains(NONE)) {
@@ -164,11 +166,11 @@ public class Client {
     }
 
     // Algorithm used for scheduling jobs, can be modified to lower turnaround time if the comparison between
-    // serverInformation.get(h).cores - jobCores <= "number" if number increases
-    // algorithm can also be modified to lower cost if number decreases
+    // serverInformation.get(h).cores - jobCores <= algorithmModifier if algorithmModifier increases
+    // algorithm can also be modified to lower cost if algorithmModifier decreases
     private String closeFit(String jobID) {
         for (int h = 0; h < serverInformation.size(); h++) {
-            if (serverInformation.get(h).cores >= jobCores && serverInformation.get(h).cores - jobCores <= 7 &&
+            if (serverInformation.get(h).cores >= jobCores && serverInformation.get(h).cores - jobCores <= algorithmModifier &&
                     serverInformation.get(h).memory >= jobMemory && serverInformation.get(h).disk >= jobDisk) {
                 return SCHD + jobID + WHITESPACE + serverInformation.get(h).serverType +
                         WHITESPACE + serverInformation.get(h).serverID + NEWLINE;
